@@ -452,12 +452,45 @@ button:disabled {
 
   .results-screen {
     grid-template-columns: 1fr;
-    max-height: calc(100vh - 64px);
-    overflow: auto;
+  }
+
+  .results-backdrop {
+    align-items: start;
+    overflow-y: auto;
+    padding: 12px;
+    position: fixed;
+    z-index: 20;
+  }
+
+  .results-backdrop .results-screen {
+    margin: auto;
+    max-height: none;
+    max-width: 560px;
+    overflow: visible;
+    width: 100%;
   }
 
   .instructions-content {
     grid-template-columns: 1fr;
+  }
+
+  .instructions-backdrop {
+    align-items: start;
+    overflow-y: auto;
+    padding: 12px;
+    position: fixed;
+    z-index: 20;
+  }
+
+  .instructions-backdrop .instructions-panel {
+    margin: auto 0;
+    max-height: none;
+    padding: 20px;
+    width: 100%;
+  }
+
+  .instructions-backdrop .instructions-panel h2 {
+    font-size: 1.7rem;
   }
 }
 
@@ -490,5 +523,31 @@ button:disabled {
     flex: 1;
     min-width: 0;
     padding: 0 10px;
+  }
+
+  .instructions-backdrop {
+    padding: 8px;
+  }
+
+  .results-backdrop {
+    padding: 8px;
+  }
+
+  .results-backdrop .results-screen {
+    gap: 18px;
+    padding: 18px 16px;
+  }
+
+  .results-backdrop .saved-scores {
+    padding: 16px;
+  }
+
+  .instructions-backdrop .instructions-panel {
+    gap: 18px;
+    padding: 18px 16px;
+  }
+
+  .instructions-backdrop .instructions-content {
+    gap: 18px;
   }
 }

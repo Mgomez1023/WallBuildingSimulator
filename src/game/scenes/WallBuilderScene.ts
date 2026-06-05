@@ -105,10 +105,22 @@ export class WallBuilderScene extends Phaser.Scene {
       trailerWallThickness,
     );
     graphics.fillRect(
+      truckBounds.left - trailerWallThickness,
+      truckBounds.top - trailerWallThickness,
+      trailerWallThickness,
+      truckBounds.bottom - truckBounds.top + trailerWallThickness * 2,
+    );
+    graphics.fillRect(
       truckBounds.right,
       truckBounds.top - trailerWallThickness,
       trailerWallThickness,
       truckBounds.bottom - truckBounds.top + trailerWallThickness * 2,
+    );
+    graphics.fillRect(
+      truckBounds.left,
+      truckBounds.top - trailerWallThickness,
+      truckBounds.right - truckBounds.left,
+      trailerWallThickness,
     );
 
     graphics.fillStyle(0x2b2b2b, 1);

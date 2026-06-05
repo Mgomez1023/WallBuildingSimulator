@@ -376,7 +376,7 @@ function App() {
           <MobileRotateControls />
         )}
         {gameState.status === "instructions" && (
-          <div className="overlay-backdrop">
+          <div className="overlay-backdrop instructions-backdrop">
             <InstructionsOverlay gameMode={gameMode} onStart={startGameplayFromInstructions} />
           </div>
         )}
@@ -386,7 +386,7 @@ function App() {
           </div>
         )}
         {(gameState.status === "wallFinished" || gameState.status === "gameOver") && resultState && (
-          <div className="overlay-backdrop">
+          <div className="overlay-backdrop results-backdrop">
             <ResultsOverlay
               gameMode={gameMode}
               resultType={resultState.resultType}
