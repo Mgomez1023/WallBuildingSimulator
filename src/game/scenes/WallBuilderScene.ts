@@ -8,16 +8,22 @@ import { WALL_COMPLETION_BONUS } from "../systems/simulationTuning";
 import {
   clampToTruckBounds,
   getOverlapRatio,
-  getWallZone,
   isFullyInsideTruckBounds,
   isInsideTruckZone,
   MAX_OVERLAP_AREA_RATIO,
 } from "../systems/trailerBounds";
 
+const PHONE_TOUCH_BREAKPOINT = 500;
+const PHONE_TOUCH_DRAG_Y_OFFSET = 95;
+const TABLET_TOUCH_DRAG_Y_OFFSET = 75;
+const TRAILER_LABEL_GAP = 18;
+const TRAILER_LABEL_DEPTH = 50;
+
 export class WallBuilderScene extends Phaser.Scene {
   private packages: PackageEntity[] = [];
   private draggedPackage: PackageEntity | null = null;
   private dragOrigin: { x: number; y: number; angle: number } | null = null;
+  private activeTouchDragYOffset = 0;
   private packageSpawner?: PackageSpawner;
   private conveyorBelt?: Phaser.GameObjects.TileSprite;
   private currentWallScore = 0;
@@ -72,7 +78,6 @@ export class WallBuilderScene extends Phaser.Scene {
   private drawSceneChrome() {
     const { gameWidth, gameHeight, truckBounds, conveyorBounds, trailerWallThickness } =
       this.layout;
-    const wallZone = getWallZone(truckBounds);
 
     this.cameras.main.setBackgroundColor("#f6f0e4");
 
@@ -163,13 +168,19 @@ export class WallBuilderScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(wallZone.centerX, wallZone.y - 28, "TRUCK WALL ZONE", {
+      .text(
+        (truckBounds.left + truckBounds.right) / 2,
+        truckBounds.top - trailerWallThickness - TRAILER_LABEL_GAP,
+        "TRUCK WALL ZONE",
+        {
         color: "#4d321f",
         fontFamily: "Arial, sans-serif",
         fontSize: "15px",
         fontStyle: "800",
-      })
-      .setOrigin(0.5);
+        },
+      )
+      .setOrigin(0.5)
+      .setDepth(TRAILER_LABEL_DEPTH);
   }
 
   private createConveyorTexture() {
@@ -248,16 +259,17 @@ export class WallBuilderScene extends Phaser.Scene {
           y: packageEntity.sprite.y,
           angle: packageEntity.sprite.angle,
         };
+        this.activeTouchDragYOffset = this.getTouchDragYOffset(pointer);
         this.enterGhostDragMode(packageEntity);
         gameEvents.emit("game:drag-active", true);
-        this.moveDraggedPackage(pointer.x, pointer.y);
+        this.moveDraggedPackage(pointer.x, pointer.y - this.activeTouchDragYOffset);
       },
     );
 
     this.input.on(
       "drag",
       (
-        _pointer: Phaser.Input.Pointer,
+        pointer: Phaser.Input.Pointer,
         gameObject: Phaser.GameObjects.GameObject,
         dragX: number,
         dragY: number,
@@ -267,21 +279,28 @@ export class WallBuilderScene extends Phaser.Scene {
           return;
         }
 
-        this.moveDraggedPackage(dragX, dragY);
+        this.moveDraggedPackage(
+          this.activeTouchDragYOffset > 0 ? pointer.x : dragX,
+          this.activeTouchDragYOffset > 0 ? pointer.y - this.activeTouchDragYOffset : dragY,
+        );
       },
     );
 
     this.input.on(
       "dragend",
-      (_pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
+      (pointer: Phaser.Input.Pointer, gameObject: Phaser.GameObjects.GameObject) => {
         const packageEntity = this.findPackageForGameObject(gameObject);
         if (!packageEntity || packageEntity !== this.draggedPackage) {
           return;
         }
 
+        if (this.activeTouchDragYOffset > 0 && this.gameStatus === "running") {
+          this.moveDraggedPackage(pointer.x, pointer.y - this.activeTouchDragYOffset);
+        }
         this.releaseDraggedPackage(packageEntity);
         this.draggedPackage = null;
         this.dragOrigin = null;
+        this.activeTouchDragYOffset = 0;
         gameEvents.emit("game:drag-active", false);
       },
     );
@@ -386,6 +405,24 @@ export class WallBuilderScene extends Phaser.Scene {
     this.draggedPackage.sprite.setPosition(nextPosition.x, nextPosition.y);
     this.draggedPackage.stopMotion();
     this.updateGhostPlacementFeedback(this.draggedPackage);
+  }
+
+  private getTouchDragYOffset(pointer: Phaser.Input.Pointer) {
+    const pointerEvent = pointer.event as (Event & { pointerType?: string }) | undefined;
+    const isTouch = pointer.wasTouch || pointerEvent?.pointerType === "touch";
+
+    if (!isTouch) {
+      return 0;
+    }
+
+    const screenOffset =
+      window.innerWidth < PHONE_TOUCH_BREAKPOINT
+        ? PHONE_TOUCH_DRAG_Y_OFFSET
+        : TABLET_TOUCH_DRAG_Y_OFFSET;
+
+    // Pointer coordinates are in game-space, so account for Phaser's FIT scaling
+    // to keep the visible lift close to the requested screen-pixel distance.
+    return screenOffset * this.scale.displayScale.y;
   }
 
   private releaseDraggedPackage(packageEntity: PackageEntity) {

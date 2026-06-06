@@ -1,4 +1,4 @@
-export const SIM_BASE_SPAWN_DELAY_MS = 1600;
+export const SIM_BASE_SPAWN_DELAY_MS = 2500;
 export const SIM_SPEED_INCREASE_PER_WALL_MS = 80;
 export const SIM_MIN_SPAWN_DELAY_MS = 650;
 export const WALL_COMPLETION_BONUS = 200;
