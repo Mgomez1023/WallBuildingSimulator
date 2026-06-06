@@ -17,8 +17,8 @@ export function SavedScores({ scores }: SavedScoresProps) {
               <span>{score.score.toLocaleString()}</span>
               <small>
                 {score.mode === "simulation"
-                  ? `Simulation / ${score.wallsCompleted} walls / ${score.placedPackages} packages`
-                  : `Single Wall / Wall ${score.wallNumber} / ${score.placedPackages} packages`}{" "}
+                  ? `Simulation / ${score.shiftDifficulty ?? "easy"} / ${score.shiftDifficultyLabel ?? "Easy / Standard Shift"} / ${score.wallsCompleted} walls / ${score.placedPackages} packages`
+                  : `Single Wall / ${score.shiftDifficulty ?? "easy"} / ${score.shiftDifficultyLabel ?? "Easy / Standard Shift"} / Wall ${score.wallNumber} / ${score.placedPackages} packages`}{" "}
                 / {formatDuration(score.durationMs)} / {formatDate(score.completedAt)}
               </small>
             </li>

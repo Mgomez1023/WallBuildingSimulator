@@ -1,11 +1,12 @@
 import Phaser from "phaser";
 import { WallBuilderScene } from "./scenes/WallBuilderScene";
 import { getGameLayoutDimensions, type GameLayoutMode } from "./systems/gameLayout";
-import type { GameMode } from "./types";
+import type { GameMode, ShiftDifficulty } from "./types";
 
 export function createWallBuilderGame(
   parent: HTMLElement,
   gameMode: GameMode,
+  shiftDifficulty: ShiftDifficulty,
   layoutMode: GameLayoutMode,
 ) {
   const layout = getGameLayoutDimensions(layoutMode);
@@ -30,6 +31,6 @@ export function createWallBuilderGame(
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
-    scene: [new WallBuilderScene(gameMode, layout)],
+    scene: [new WallBuilderScene(gameMode, shiftDifficulty, layout)],
   });
 }

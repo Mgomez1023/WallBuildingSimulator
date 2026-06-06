@@ -2,10 +2,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { gameEvents } from "./game/systems/EventBus";
 import { getLayoutMode, type GameLayoutMode } from "./game/systems/gameLayout";
 import { loadScores, saveScore } from "./game/systems/scoreStorage";
-import type { GameMode, GameState, ScoreData, ScoreUpdate } from "./game/types";
+import {
+  DEFAULT_SHIFT_DIFFICULTY,
+  getShiftDifficultyConfig,
+} from "./game/systems/shiftDifficulty";
+import type {
+  GameMode,
+  GameState,
+  ScoreData,
+  ScoreUpdate,
+  ShiftDifficulty,
+} from "./game/types";
 import { GameCanvas } from "./ui/GameCanvas";
 import { InstructionsOverlay } from "./ui/InstructionsOverlay";
-import { ModeSelectionOverlay } from "./ui/ModeSelectionOverlay";
 import { MobileRotateControls } from "./ui/MobileRotateControls";
 import { PauseOverlay } from "./ui/PauseOverlay";
 import { ResultsOverlay, type ResultType } from "./ui/ResultsOverlay";
@@ -29,6 +38,7 @@ const createScoreId = () => {
 const createInitialGameState = (): GameState => ({
   status: "menu",
   gameMode: null,
+  shiftDifficulty: DEFAULT_SHIFT_DIFFICULTY,
   score: 0,
   currentWallScore: 0,
   placedPackages: 0,
@@ -49,6 +59,7 @@ function App() {
   const [hasActiveDrag, setHasActiveDrag] = useState(false);
 
   const gameModeRef = useRef<GameMode | null>(null);
+  const shiftDifficultyRef = useRef<ShiftDifficulty>(DEFAULT_SHIFT_DIFFICULTY);
   const scoreRef = useRef(0);
   const currentWallScoreRef = useRef(0);
   const placedPackagesRef = useRef(0);
@@ -59,47 +70,40 @@ function App() {
   const scoreSavedRef = useRef(false);
   const resultStateRef = useRef<ResultState | null>(null);
 
-  const resetSessionRefs = useCallback((gameMode: GameMode | null) => {
-    gameModeRef.current = gameMode;
-    scoreRef.current = 0;
-    currentWallScoreRef.current = 0;
-    placedPackagesRef.current = 0;
-    totalPackagesPlacedRef.current = 0;
-    wallsCompletedRef.current = 0;
-    wallNumberRef.current = 1;
-    runStartedAtRef.current = null;
-    scoreSavedRef.current = false;
-    resultStateRef.current = null;
-    setResultState(null);
-    setHasActiveDrag(false);
-  }, []);
-
-  const startModeSelection = useCallback(() => {
-    resetSessionRefs(null);
-    setGameState((currentState) => ({
-      ...currentState,
-      status: "modeSelect",
-      gameMode: null,
-      score: 0,
-      currentWallScore: 0,
-      placedPackages: 0,
-      totalPackagesPlaced: 0,
-      conveyorPackages: 0,
-      wallsCompleted: 0,
-      spawnDelayMs: 0,
-      runStartedAt: null,
-      wallNumber: 1,
-    }));
-  }, [resetSessionRefs]);
+  const resetSessionRefs = useCallback(
+    (
+      gameMode: GameMode | null,
+      shiftDifficulty: ShiftDifficulty = DEFAULT_SHIFT_DIFFICULTY,
+    ) => {
+      gameModeRef.current = gameMode;
+      shiftDifficultyRef.current = shiftDifficulty;
+      scoreRef.current = 0;
+      currentWallScoreRef.current = 0;
+      placedPackagesRef.current = 0;
+      totalPackagesPlacedRef.current = 0;
+      wallsCompletedRef.current = 0;
+      wallNumberRef.current = 1;
+      runStartedAtRef.current = null;
+      scoreSavedRef.current = false;
+      resultStateRef.current = null;
+      setResultState(null);
+      setHasActiveDrag(false);
+    },
+    [],
+  );
 
   const startInstructionsForMode = useCallback(
-    (gameMode: GameMode) => {
-      resetSessionRefs(gameMode);
+    (
+      gameMode: GameMode,
+      shiftDifficulty: ShiftDifficulty = DEFAULT_SHIFT_DIFFICULTY,
+    ) => {
+      resetSessionRefs(gameMode, shiftDifficulty);
       setRunId((currentRunId) => currentRunId + 1);
       setGameState((currentState) => ({
         ...currentState,
         status: "instructions",
         gameMode,
+        shiftDifficulty,
         score: 0,
         currentWallScore: 0,
         placedPackages: 0,
@@ -127,7 +131,6 @@ function App() {
   const restartMode = useCallback(() => {
     const gameMode = gameModeRef.current;
     if (!gameMode) {
-      startModeSelection();
       return;
     }
 
@@ -140,8 +143,8 @@ function App() {
       setGameState((currentState) => ({ ...currentState, highScores }));
     }
 
-    startInstructionsForMode(gameMode);
-  }, [startInstructionsForMode, startModeSelection]);
+    startInstructionsForMode(gameMode, shiftDifficultyRef.current);
+  }, [startInstructionsForMode]);
 
   const resumeRun = useCallback(() => {
     setGameState((currentState) =>
@@ -166,10 +169,14 @@ function App() {
   const createScoreRecord = useCallback((gameMode: GameMode): ScoreData => {
     const startedAt = runStartedAtRef.current ?? Date.now();
     const isSimulation = gameMode === "simulation";
+    const shiftDifficulty = shiftDifficultyRef.current;
+    const shiftConfig = getShiftDifficultyConfig(shiftDifficulty);
 
     return {
       id: createScoreId(),
       mode: gameMode,
+      shiftDifficulty,
+      shiftDifficultyLabel: `${shiftConfig.name} / ${shiftConfig.shiftName}`,
       score: scoreRef.current,
       placedPackages: isSimulation
         ? totalPackagesPlacedRef.current
@@ -325,7 +332,6 @@ function App() {
     const updateLayoutMode = () => {
       if (
         gameState.status === "menu" ||
-        gameState.status === "modeSelect" ||
         gameState.status === "instructions"
       ) {
         setLayoutMode(getLayoutMode());
@@ -348,11 +354,7 @@ function App() {
   }, [togglePause]);
 
   if (gameState.status === "menu") {
-    return <StartScreen highScores={gameState.highScores} onStart={startModeSelection} />;
-  }
-
-  if (gameState.status === "modeSelect") {
-    return <ModeSelectionOverlay onSelectMode={startInstructionsForMode} onBackHome={backToHome} />;
+    return <StartScreen highScores={gameState.highScores} onSelectMode={startInstructionsForMode} />;
   }
 
   const gameMode = gameState.gameMode;
@@ -361,6 +363,7 @@ function App() {
   }
 
   const isSimulation = gameMode === "simulation";
+  const shiftConfig = getShiftDifficultyConfig(gameState.shiftDifficulty);
 
   return (
     <main className="app-shell">
@@ -370,6 +373,7 @@ function App() {
           runId={runId}
           status={gameState.status}
           gameMode={gameMode}
+          shiftDifficulty={gameState.shiftDifficulty}
           layoutMode={layoutMode}
         />
         {layoutMode === "mobile" && hasActiveDrag && gameState.status === "running" && (
@@ -377,7 +381,11 @@ function App() {
         )}
         {gameState.status === "instructions" && (
           <div className="overlay-backdrop instructions-backdrop">
-            <InstructionsOverlay gameMode={gameMode} onStart={startGameplayFromInstructions} />
+            <InstructionsOverlay
+              gameMode={gameMode}
+              shiftDifficulty={gameState.shiftDifficulty}
+              onStart={startGameplayFromInstructions}
+            />
           </div>
         )}
         {gameState.status === "paused" && (
@@ -410,10 +418,23 @@ function App() {
         )}
       </section>
 
+      <section className="mobile-game-actions" aria-label="Game actions">
+        <button
+          className="primary-button mobile-complete-wall"
+          type="button"
+          onClick={finishOrCompleteWall}
+          disabled={gameState.status !== "running"}
+        >
+          {isSimulation ? "Complete Wall" : "Finish Wall"}
+        </button>
+      </section>
+
       <header className="game-header">
         <div>
           <p className="eyebrow">UPS Wall Builder</p>
-          <h1>{isSimulation ? "Simulation Shift" : "Truck Wall"}</h1>
+          <h1>
+            {isSimulation ? "Simulation" : "Single Wall"} - {shiftConfig.shiftName}
+          </h1>
         </div>
         <div className="score-strip" aria-live="polite">
           <span>
@@ -433,7 +454,10 @@ function App() {
           </span>
           {isSimulation && (
             <span>
-              Conveyor <strong>{gameState.conveyorPackages} / 10</strong>
+              Conveyor{" "}
+              <strong>
+                {gameState.conveyorPackages} / {shiftConfig.conveyorLimit}
+              </strong>
             </span>
           )}
           {isSimulation && (
@@ -445,7 +469,20 @@ function App() {
             Wall <strong>{gameState.wallNumber}</strong>
           </span>
         </div>
-        <div className="header-actions">
+        <div className="mobile-score-actions">
+          <button className="secondary-button" type="button" onClick={restartMode}>
+            Restart
+          </button>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={finishRun}
+            disabled={gameState.status !== "running"}
+          >
+            Game Over
+          </button>
+        </div>
+        <div className="header-actions desktop-header-actions">
           <button className="secondary-button" type="button" onClick={restartMode}>
             Restart
           </button>

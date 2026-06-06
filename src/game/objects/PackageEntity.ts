@@ -40,10 +40,12 @@ export class PackageEntity {
     this.sprite = sprite;
     this.label = scene.add
       .text(x, y, data.label, {
+        backgroundColor: data.kind === "bulk" ? "#fff7ec" : undefined,
         color: "#23170f",
         fontFamily: "Arial, sans-serif",
-        fontSize: "14px",
+        fontSize: data.kind === "bulk" && data.width < 105 ? "11px" : data.kind === "bulk" ? "12px" : "14px",
         fontStyle: "700",
+        padding: data.kind === "bulk" ? { x: 4, y: 2 } : undefined,
       })
       .setOrigin(0.5)
       .setDepth(this.labelDepth);
@@ -128,7 +130,7 @@ export class PackageEntity {
 }
 
 function ensurePackageTexture(scene: Phaser.Scene, data: PackageData) {
-  const textureKey = `package-${data.width}x${data.height}-${data.color}-${data.fragility}`;
+  const textureKey = `package-${data.kind}-${data.bulkShape ?? "rectangle"}-${data.width}x${data.height}-${data.color}-${data.fragility}`;
 
   if (scene.textures.exists(textureKey)) {
     return textureKey;
@@ -136,17 +138,89 @@ function ensurePackageTexture(scene: Phaser.Scene, data: PackageData) {
 
   const graphics = scene.add.graphics();
   const tapeColor = data.fragility === "high" ? 0xffd166 : 0xd9b36a;
-  const borderColor = data.fragility === "high" ? 0xbf2f2f : 0x432918;
+  const borderColor =
+    data.kind === "bulk" ? 0x1f160e : data.fragility === "high" ? 0xbf2f2f : 0x432918;
 
-  graphics.fillStyle(data.color, 1);
-  graphics.fillRoundedRect(0, 0, data.width, data.height, 6);
-  graphics.fillStyle(tapeColor, 0.9);
-  graphics.fillRect(data.width / 2 - 5, 0, 10, data.height);
-  graphics.fillRect(0, data.height / 2 - 4, data.width, 8);
-  graphics.lineStyle(data.fragility === "high" ? 4 : 2, borderColor, 1);
-  graphics.strokeRoundedRect(1, 1, data.width - 2, data.height - 2, 6);
+  if (data.kind === "bulk" && data.bulkShape) {
+    drawBulkShape(graphics, data, borderColor, tapeColor);
+  } else {
+    graphics.fillStyle(data.color, 1);
+    graphics.fillRoundedRect(0, 0, data.width, data.height, 6);
+    graphics.fillStyle(tapeColor, 0.9);
+    graphics.fillRect(data.width / 2 - 5, 0, 10, data.height);
+    graphics.fillRect(0, data.height / 2 - 4, data.width, 8);
+    graphics.lineStyle(data.fragility === "high" ? 4 : 2, borderColor, 1);
+    graphics.strokeRoundedRect(1, 1, data.width - 2, data.height - 2, 6);
+  }
+
   graphics.generateTexture(textureKey, data.width, data.height);
   graphics.destroy();
 
   return textureKey;
+}
+
+function drawBulkShape(
+  graphics: Phaser.GameObjects.Graphics,
+  data: PackageData,
+  borderColor: number,
+  accentColor: number,
+) {
+  const centerX = data.width / 2;
+  const centerY = data.height / 2;
+  const inset = 4;
+
+  graphics.fillStyle(data.color, 1);
+  graphics.lineStyle(4, borderColor, 1);
+
+  if (data.bulkShape === "round") {
+    const radius = Math.max(8, Math.min(data.width, data.height) / 2 - inset);
+    graphics.fillCircle(centerX, centerY, radius);
+    graphics.strokeCircle(centerX, centerY, radius);
+  } else {
+    const points = getBulkPolygonPoints(data);
+    graphics.fillPoints(points, true);
+    graphics.strokePoints(points, true);
+  }
+
+  // The label is a separate text object above the sprite. This small center
+  // badge gives bulk shapes a package-like visual without clipping that label.
+  graphics.fillStyle(accentColor, 0.9);
+  graphics.fillRoundedRect(centerX - 18, centerY - 8, 36, 16, 4);
+}
+
+function getBulkPolygonPoints(data: PackageData) {
+  const percentages =
+    data.bulkShape === "slantedBox"
+      ? [
+          [0.12, 0.08],
+          [0.92, 0],
+          [1, 0.78],
+          [0.08, 1],
+          [0, 0.22],
+        ]
+      : data.bulkShape === "lumpyBox"
+        ? [
+            [0.08, 0.12],
+            [0.88, 0.04],
+            [1, 0.52],
+            [0.78, 0.94],
+            [0.16, 0.88],
+            [0, 0.42],
+          ]
+        : [
+            [0.04, 0.18],
+            [0.96, 0.08],
+            [1, 0.8],
+            [0.82, 1],
+            [0.1, 0.92],
+            [0, 0.4],
+          ];
+
+  return percentages.map(
+    ([x, y]) =>
+      new Phaser.Geom.Point(
+        Phaser.Math.Clamp(x * data.width, 3, data.width - 3),
+        Phaser.Math.Clamp(y * data.height, 3, data.height - 3),
+      ),
+  );
 }

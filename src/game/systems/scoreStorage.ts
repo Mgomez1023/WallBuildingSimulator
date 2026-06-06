@@ -1,4 +1,8 @@
-import type { ScoreData } from "../types";
+import {
+  DEFAULT_SHIFT_DIFFICULTY,
+  getShiftDifficultyConfig,
+} from "./shiftDifficulty";
+import type { ScoreData, ShiftDifficulty } from "../types";
 
 const SCORE_STORAGE_KEY = "ups-wall-builder:scores";
 const MAX_SAVED_SCORES = 10;
@@ -34,7 +38,7 @@ export function saveScore(score: ScoreData): ScoreData[] {
     return loadScores();
   }
 
-  const nextScores = sortScores([...loadScores(), score]).slice(0, MAX_SAVED_SCORES);
+  const nextScores = sortScores([...loadScores(), normalizeScore(score)]).slice(0, MAX_SAVED_SCORES);
 
   if (hasLocalStorage()) {
     window.localStorage.setItem(SCORE_STORAGE_KEY, JSON.stringify(nextScores));
@@ -51,12 +55,27 @@ function sortScores(scores: ScoreData[]) {
 
 function normalizeScore(score: ScoreData) {
   const legacyCreatedAt = score.createdAt ?? new Date().toISOString();
+  const mode = score.mode ?? "singleWall";
+  const shiftDifficulty = normalizeShiftDifficulty(
+    score.shiftDifficulty ?? score.simulationDifficulty,
+  );
+  const shiftConfig = getShiftDifficultyConfig(shiftDifficulty);
 
   return {
     ...score,
-    mode: score.mode ?? "singleWall",
+    mode,
+    shiftDifficulty,
+    shiftDifficultyLabel: `${shiftConfig.name} / ${shiftConfig.shiftName}`,
+    simulationDifficulty: undefined,
+    simulationDifficultyLabel: undefined,
     completedAt: score.completedAt ?? legacyCreatedAt,
     wallNumber: score.wallNumber ?? 1,
     wallsCompleted: score.wallsCompleted ?? Math.max(0, (score.wallNumber ?? 1) - 1),
   };
+}
+
+function normalizeShiftDifficulty(difficulty: ShiftDifficulty | undefined): ShiftDifficulty {
+  return difficulty === "medium" || difficulty === "hard"
+    ? difficulty
+    : DEFAULT_SHIFT_DIFFICULTY;
 }

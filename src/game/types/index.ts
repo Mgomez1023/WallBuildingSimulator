@@ -1,8 +1,15 @@
 export type Fragility = "low" | "medium" | "high";
 export type GameMode = "singleWall" | "simulation";
+export type ShiftDifficulty = "easy" | "medium" | "hard";
+export type PackageKind = "standard" | "bulk";
+export type BulkPackagePreset = "long" | "wide" | "tall" | "heavy-irregular" | "round";
+export type BulkPackageShape = "round" | "slantedBox" | "lumpyBox" | "wideOddBox";
 
 export interface PackageData {
   id: string;
+  kind: PackageKind;
+  bulkPreset?: BulkPackagePreset;
+  bulkShape?: BulkPackageShape;
   width: number;
   height: number;
   depth: number;
@@ -15,6 +22,11 @@ export interface PackageData {
 export interface ScoreData {
   id: string;
   mode: GameMode;
+  shiftDifficulty?: ShiftDifficulty;
+  shiftDifficultyLabel?: string;
+  /** Legacy fields retained so older localStorage records can be migrated. */
+  simulationDifficulty?: ShiftDifficulty;
+  simulationDifficultyLabel?: string;
   score: number;
   placedPackages: number;
   wallsCompleted: number;
@@ -26,7 +38,6 @@ export interface ScoreData {
 
 export type GameStatus =
   | "menu"
-  | "modeSelect"
   | "instructions"
   | "running"
   | "paused"
@@ -36,6 +47,7 @@ export type GameStatus =
 export interface GameState {
   status: GameStatus;
   gameMode: GameMode | null;
+  shiftDifficulty: ShiftDifficulty;
   score: number;
   currentWallScore: number;
   placedPackages: number;

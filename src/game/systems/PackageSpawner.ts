@@ -1,13 +1,11 @@
 import Phaser from "phaser";
 import { PackageEntity } from "../objects/PackageEntity";
-import type { GameMode } from "../types";
+import type { GameMode, ShiftDifficulty } from "../types";
 import { createRandomPackage } from "./packageFactory";
 import type { GameLayout } from "./gameLayout";
-import { getSimulationSpawnDelay } from "./simulationTuning";
+import { getShiftDifficultyConfig, getShiftSpawnDelay } from "./shiftDifficulty";
 
-export const SINGLE_WALL_MAX_CONVEYOR_PACKAGES = 3;
 export const SINGLE_WALL_SPAWN_DELAY_MS = 3500;
-export const SIMULATION_MAX_CONVEYOR_PACKAGES = 10;
 
 interface SpawnSettings {
   maxConveyorPackages: number;
@@ -22,12 +20,13 @@ export class PackageSpawner {
     private readonly scene: Phaser.Scene,
     private readonly packages: PackageEntity[],
     private readonly gameMode: GameMode,
+    private readonly shiftDifficulty: ShiftDifficulty,
     private readonly layout: GameLayout,
     private readonly getCurrentWallNumber: () => number,
     private readonly canSpawnPackages: () => boolean,
     private readonly onConveyorCountChanged: (count: number) => void,
   ) {
-    this.settings = getSpawnSettingsForMode(gameMode);
+    this.settings = getSpawnSettingsForDifficulty(shiftDifficulty);
   }
 
   start(spawnImmediately = true) {
@@ -76,8 +75,9 @@ export class PackageSpawner {
       return null;
     }
 
-    const packageData = createRandomPackage(++this.packageSequence);
-    const spawnPoint = this.getSpawnPosition(packageData.height);
+    const bulkChance = getShiftDifficultyConfig(this.shiftDifficulty).bulkChance;
+    const packageData = createRandomPackage(++this.packageSequence, bulkChance);
+    const spawnPoint = this.getSpawnPosition(packageData.width, packageData.height);
     const packageEntity = new PackageEntity(this.scene, spawnPoint.x, spawnPoint.y, packageData);
 
     this.scene.input.setDraggable(packageEntity.sprite);
@@ -97,7 +97,7 @@ export class PackageSpawner {
 
   getCurrentSpawnDelay() {
     return this.gameMode === "simulation"
-      ? getSimulationSpawnDelay(this.getCurrentWallNumber())
+      ? getShiftSpawnDelay(this.shiftDifficulty, this.getCurrentWallNumber())
       : SINGLE_WALL_SPAWN_DELAY_MS;
   }
 
@@ -110,10 +110,13 @@ export class PackageSpawner {
     const packageWidth = packageEntity.sprite.packageData.width;
     const packageHeight = packageEntity.sprite.packageData.height;
     const y = conveyorBounds.y - packageHeight / 2 - 10;
+    const horizontalInset = packageWidth / 2 + 8;
+    const leftPosition = conveyorBounds.x + horizontalInset;
+    const rightPosition = conveyorBounds.right - horizontalInset;
     const candidates = [
-      conveyorBounds.x + 48,
+      leftPosition <= rightPosition ? leftPosition : conveyorBounds.centerX,
       conveyorBounds.centerX,
-      conveyorBounds.right - 48,
+      leftPosition <= rightPosition ? rightPosition : conveyorBounds.centerX,
     ];
     const otherConveyorPackages = this.packages.filter(
       (candidate) => candidate !== packageEntity && !candidate.sprite.placedInWall,
@@ -131,24 +134,21 @@ export class PackageSpawner {
     };
   }
 
-  private getSpawnPosition(packageHeight: number) {
+  private getSpawnPosition(packageWidth: number, packageHeight: number) {
     const conveyorBounds = this.layout.conveyorBounds;
+    const horizontalInset = packageWidth / 2 + 8;
+    const minX = conveyorBounds.x + horizontalInset;
+    const maxX = conveyorBounds.right - horizontalInset;
 
     return {
-      x: Phaser.Math.Between(conveyorBounds.x + 58, conveyorBounds.right - 58),
+      x: minX <= maxX ? Phaser.Math.Between(Math.ceil(minX), Math.floor(maxX)) : conveyorBounds.centerX,
       y: conveyorBounds.y - packageHeight / 2 - 10,
     };
   }
 }
 
-export function getSpawnSettingsForMode(gameMode: GameMode): SpawnSettings {
-  if (gameMode === "simulation") {
-    return {
-      maxConveyorPackages: SIMULATION_MAX_CONVEYOR_PACKAGES,
-    };
-  }
-
+export function getSpawnSettingsForDifficulty(shiftDifficulty: ShiftDifficulty): SpawnSettings {
   return {
-    maxConveyorPackages: SINGLE_WALL_MAX_CONVEYOR_PACKAGES,
+    maxConveyorPackages: getShiftDifficultyConfig(shiftDifficulty).conveyorLimit,
   };
 }

@@ -120,6 +120,54 @@ button:disabled {
   max-width: 760px;
 }
 
+.home-mode-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.home-mode-actions .primary-button {
+  min-height: 52px;
+}
+
+.shift-difficulty-panel {
+  background: rgba(31, 22, 14, 0.88);
+  border: 1px solid rgba(255, 246, 231, 0.35);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  max-width: 680px;
+  padding: 16px;
+}
+
+.shift-difficulty-options {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.shift-difficulty-button {
+  align-content: center;
+  background: #fff7ec;
+  color: #261a12;
+  display: grid;
+  gap: 3px;
+  min-height: 68px;
+  padding: 10px 14px;
+  text-align: left;
+}
+
+.shift-difficulty-button:hover {
+  background: #f7be34;
+}
+
+.shift-difficulty-button span {
+  color: #6e5742;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
 .eyebrow {
   color: inherit;
   font-size: 0.78rem;
@@ -236,6 +284,14 @@ button:disabled {
   flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-end;
+}
+
+.mobile-game-actions {
+  display: none;
+}
+
+.mobile-score-actions {
+  display: none;
 }
 
 .play-area {
@@ -401,10 +457,59 @@ button:disabled {
     padding: 28px;
   }
 
+  .home-mode-actions {
+    display: grid;
+  }
+
+  .home-mode-actions .primary-button {
+    width: 100%;
+  }
+
+  .shift-difficulty-panel {
+    max-width: none;
+  }
+
+  .shift-difficulty-options {
+    grid-template-columns: 1fr;
+  }
+
+  .shift-difficulty-button {
+    width: 100%;
+  }
+
   .game-header {
     align-items: stretch;
     grid-template-columns: 1fr;
     padding: 12px;
+  }
+
+  .desktop-header-actions {
+    display: none;
+  }
+
+  .mobile-game-actions {
+    display: grid;
+    gap: 8px;
+  }
+
+  .mobile-game-actions button {
+    min-height: 52px;
+    width: 100%;
+  }
+
+  .mobile-complete-wall {
+    font-size: 1.05rem;
+  }
+
+  .mobile-score-actions {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mobile-score-actions button {
+    min-height: 52px;
+    width: 100%;
   }
 
   .game-header h1 {
@@ -426,12 +531,10 @@ button:disabled {
     margin: 3px 0 0;
   }
 
-  .header-actions,
   .button-row {
     justify-content: stretch;
   }
 
-  .header-actions button,
   .button-row button {
     flex: 1 1 120px;
   }
@@ -501,16 +604,6 @@ button:disabled {
 
   .score-strip span {
     font-size: 0.84rem;
-  }
-
-  .header-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .header-actions .primary-button {
-    grid-column: 1 / -1;
-    width: 100%;
   }
 
   .mobile-rotate-controls {

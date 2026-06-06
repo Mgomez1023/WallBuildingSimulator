@@ -1,10 +1,10 @@
 import Phaser from "phaser";
 import { PackageEntity } from "../objects/PackageEntity";
-import type { GameMode, GameStatus, PackageData } from "../types";
+import type { GameMode, GameStatus, PackageData, ShiftDifficulty } from "../types";
 import { gameEvents } from "../systems/EventBus";
 import { PackageSpawner } from "../systems/PackageSpawner";
 import type { GameLayout } from "../systems/gameLayout";
-import { WALL_COMPLETION_BONUS } from "../systems/simulationTuning";
+import { getShiftDifficultyConfig } from "../systems/shiftDifficulty";
 import {
   clampToTruckBounds,
   getOverlapRatio,
@@ -43,6 +43,7 @@ export class WallBuilderScene extends Phaser.Scene {
 
   constructor(
     private readonly gameMode: GameMode,
+    private readonly shiftDifficulty: ShiftDifficulty,
     private readonly layout: GameLayout,
   ) {
     super("WallBuilderScene");
@@ -58,6 +59,7 @@ export class WallBuilderScene extends Phaser.Scene {
       this,
       this.packages,
       this.gameMode,
+      this.shiftDifficulty,
       this.layout,
       () => this.wallNumber,
       () => this.canSpawnPackages(),
@@ -372,10 +374,12 @@ export class WallBuilderScene extends Phaser.Scene {
 
     // Score is intentionally simple for the MVP, but it already considers
     // package footprint and stored depth so later scoring can evolve in place.
-    const packageScore =
+    const standardPackageScore =
       10 +
       Math.round((packageData.width * packageData.height) / 900) +
       Math.round(packageData.depth / 5);
+    const packageScore =
+      packageData.kind === "bulk" ? standardPackageScore * 2 + 25 : standardPackageScore;
     this.currentWallScore += packageScore;
     this.totalRunScore += packageScore;
     this.packageSpawner?.notifyConveyorCountChanged();
@@ -619,7 +623,7 @@ export class WallBuilderScene extends Phaser.Scene {
   }
 
   private applyWallCompletionBonus() {
-    this.totalRunScore += WALL_COMPLETION_BONUS;
+    this.totalRunScore += getShiftDifficultyConfig(this.shiftDifficulty).wallCompletionBonus;
   }
 
   private clearTrailerPackagesOnly() {

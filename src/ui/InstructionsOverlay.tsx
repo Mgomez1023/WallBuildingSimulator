@@ -1,12 +1,19 @@
-import type { GameMode } from "../game/types";
+import { getShiftDifficultyConfig } from "../game/systems/shiftDifficulty";
+import type { GameMode, ShiftDifficulty } from "../game/types";
 
 interface InstructionsOverlayProps {
   gameMode: GameMode;
+  shiftDifficulty: ShiftDifficulty;
   onStart: () => void;
 }
 
-export function InstructionsOverlay({ gameMode, onStart }: InstructionsOverlayProps) {
+export function InstructionsOverlay({
+  gameMode,
+  shiftDifficulty,
+  onStart,
+}: InstructionsOverlayProps) {
   const isSimulation = gameMode === "simulation";
+  const shiftConfig = getShiftDifficultyConfig(shiftDifficulty);
 
   return (
     <div
@@ -16,7 +23,9 @@ export function InstructionsOverlay({ gameMode, onStart }: InstructionsOverlayPr
       aria-labelledby="instructions-title"
     >
       <header>
-        <p className="eyebrow">Pre-Round Briefing</p>
+        <p className="eyebrow">
+          {shiftConfig.name} / {shiftConfig.shiftName}
+        </p>
         <h2 id="instructions-title">
           {isSimulation ? "Simulation Mode" : "Build a Strong Truck Wall"}
         </h2>

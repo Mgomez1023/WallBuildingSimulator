@@ -39,6 +39,10 @@ export function ResultsOverlay({
         <p className="eyebrow">{isSimulation ? "Simulation Results" : `Wall ${result.wallNumber}`}</p>
         <h2 id="results-title">{title}</h2>
         <p className="final-score">{result.score.toLocaleString()}</p>
+        <p className="result-line">
+          {result.shiftDifficulty ?? "easy"} /{" "}
+          {result.shiftDifficultyLabel ?? "Easy / Standard Shift"}
+        </p>
         {isSimulation && <p className="result-line">{result.wallsCompleted} walls completed</p>}
         <p className="result-line">
           {result.placedPackages} {isSimulation ? "total packages placed" : "packages placed"}
